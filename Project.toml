@@ -1,0 +1,19 @@
+name = "KitPD"
+uuid = "3ef43c9b-54eb-4a84-9e64-6c23eeea5d25"
+authors = ["Tianbai Xiao <tianbaixiao@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+KitBase = "86eed249-3a28-466f-8d3a-596821e1af9a"
+Peridynamics = "4dc47793-80f3-4232-b30e-ca78ca9d621b"
+
+[compat]
+KitBase = "0.9"
+Peridynamics = "0.1"
+julia = "^1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
