@@ -1,9 +1,12 @@
 """
 21600 points
 102448 bonds
+
+Note that recent changes on Peridynamics@main haven't been tagged
 """
 
 using KitPD
+using ProgressMeter
 
 lx = ly = 0.05
 lz = 0.005
@@ -65,8 +68,49 @@ for precrack in sim.precracks
 	PD.define_precrack!(body, precrack)
 end
 
+### test
+findall(body.bond_failure .== 0)
+body.bond_data[7874]
+163 in precrack_set_b && 181 in precrack_set_a
 
+findall(0 .< body.n_active_family_members[:, 1] .< body.n_family_members)
+###
 
+PD.update_thread_cache!(body)
+PD.calc_damage!(body)
 
+### test
+findall(body.damage .== 1)
+###
 
+if sim.td.Δt < 0.0 && sim.td.alg !== :dynrelax
+	sim.td.Δt = PD.calc_stable_timestep(body, sim.mat.rho, sim.mat.K, sim.mat.δ)
+end
 
+PD.export_vtk(body, sim.es.resultfile_prefix, 0, 0.0)
+
+p = Progress(sim.td.n_timesteps;
+	dt = 1,
+	desc = "Time integration... ",
+	barlen = 30,
+	color = :normal,
+	enabled = !PD.is_logging(stderr),
+)
+Δt½ = 0.5 * sim.td.Δt
+begin
+    for t in 1:2000#sim.td.n_timesteps
+        time = t * sim.td.Δt
+        PD.update_velhalf!(body, Δt½)
+        PD.apply_bcs!(body, sim.bcs, time)
+        PD.update_disp_and_position!(body, sim.td.Δt)
+        PD.compute_forcedensity!(body, sim.mat)
+        PD.update_thread_cache!(body)
+        PD.calc_damage!(body)
+        PD.compute_equation_of_motion!(body, Δt½, sim.mat.rho)
+        if mod(t, sim.es.exportfreq) == 0
+            PD.export_vtk(body, sim.es.resultfile_prefix, t, time)
+        end
+        next!(p)
+    end
+finish!(p)
+end
