@@ -8,6 +8,8 @@ Note that recent changes on Peridynamics@main haven't been tagged
 using KitPD
 using ProgressMeter
 
+cd(@__DIR__)
+
 lx = ly = 0.05
 lz = 0.005
 ny = 60
