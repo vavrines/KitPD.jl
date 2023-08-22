@@ -1,7 +1,12 @@
-# ------------------------------------------------------------
-# 13.6.3 Plate Subjected to a Shock of Pressure and Temperature,
-# and Their Combination
-# ------------------------------------------------------------
+"""
+13.6.3 Plate Subjected to a Shock of Pressure and Temperature
+
+Reminder:
+- hs: heat source
+
+Question:
+- ta & ma: Dimensionless coefficients in Eq. (13.65)
+"""
 
 using KitBase.ProgressMeter: @showprogress
 using Base.Threads: @threads
@@ -166,32 +171,34 @@ end
 end
 
 for i = 1:totnode
-    disp[i,1] = 0.0
-    disp[i,2] = 0.001 * coord[i,2]
+    disp[i, 1] = 0.0
+    disp[i, 2] = 0.001 * coord[i, 2]
 end
 
 @showprogress for i = 1:totnode
-    stendens[i,2] = 0.0
-    for j = 1:numfam[i,1]
-        cnode = nodefam[pointfam[i,1]+j-1,1]
-        idist = sqrt((coord[cnode,1] - coord[i,1])^2 + (coord[cnode,2] - coord[i,2])^2)
-        is = sqrt((coord[cnode,1] + disp[cnode,1] - coord[i,1] - disp[i,1])^2 + 
-        (coord[cnode,2] + disp[cnode,2] - coord[i,2] - disp[i,2])^2)
-        if (idist <= delta-radij)
+    stendens[i, 2] = 0.0
+    for j = 1:numfam[i, 1]
+        cnode = nodefam[pointfam[i, 1]+j-1, 1]
+        idist = sqrt((coord[cnode, 1] - coord[i, 1])^2 + (coord[cnode, 2] - coord[i, 2])^2)
+        is = sqrt(
+            (coord[cnode, 1] + disp[cnode, 1] - coord[i, 1] - disp[i, 1])^2 +
+            (coord[cnode, 2] + disp[cnode, 2] - coord[i, 2] - disp[i, 2])^2,
+        )
+        if (idist <= delta - radij)
             fac = 1.0
-        elseif (idist <= delta+radij)
-            fac = (delta+radij-idist)/(2.0*radij)
+        elseif (idist <= delta + radij)
+            fac = (delta + radij - idist) / (2.0 * radij)
         else
             fac = 0.0
         end
-        stendens[i,2] += 3.0 / 8.0 * ma * ((is - idist) / idist)^2 * idist * vol * fac
+        stendens[i, 2] += 3.0 / 8.0 * ma * ((is - idist) / idist)^2 * idist * vol * fac
     end
 
-    fncstm[i,2] = stenload2 / stendens[i,2]
+    fncstm[i, 2] = stenload2 / stendens[i, 2]
 end
 
 for i = 1:totnode
-    tem[i,1] = 0.0
-    disp[i,1] = 0.0
-    disp[i,2] = 0.0
+    tem[i, 1] = 0.0
+    disp[i, 1] = 0.0
+    disp[i, 2] = 0.0
 end
