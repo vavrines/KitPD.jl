@@ -47,8 +47,8 @@ begin
     dx = length / ndivx
     thick = dx
     delta = 3.015 * dx
-    area = dx * dx
-    ta = 6.0 / (delta^3) / pi / thick
+    area = dx^2
+    ta = 6.0 / (delta^3) / π / thick
     ma = ta
     cc = 0.10
     tb = cc / 2.0
@@ -282,7 +282,7 @@ end
             if (abs(coord[cnode, 2] - coord[i, 2]) <= 1e-10)
                 theta = 0.0
             elseif (abs(coord[cnode, 1] - coord[i, 1]) <= 1e-10)
-                theta = 90.0 * pi / 180.0
+                theta = 90.0 * π / 180.0
             else
                 theta = atan(
                     abs(coord[cnode, 2] - coord[i, 2]) / abs(coord[cnode, 1] - coord[i, 1]),
