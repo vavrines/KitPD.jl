@@ -1,2 +1,7 @@
 Manifest.toml
 example/results/
+
+couple/*.txt
+couple/*.jpg
+couple/Displacement
+couple/Temparature changes
