@@ -7,6 +7,7 @@ version = "0.1.0"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 KitBase = "86eed249-3a28-466f-8d3a-596821e1af9a"
 Peridynamics = "4dc47793-80f3-4232-b30e-ca78ca9d621b"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 
 [compat]
 KitBase = "0.9"

@@ -1,64 +1,75 @@
+"""
+Qs
+---
+1. mechanical horizon always smaller than thermal case?
+
+"""
+
+using Base.Threads: @threads
+using ProgressMeter: @showprogress
+
 cd(@__DIR__)
 include("init.jl")
+include("fns.jl")
 
-length = 0.1 # meter
-width = 0.1  # meter
-nx = 200
-ny = 200
-dx = length / nx
-dy = width / ny
-rh = 3.015 * dx
+begin
+    length = 0.1 # meter
+    width = 0.1
+    nx = 200
+    ny = 200
+    dx = length / nx
+    dy = width / ny
+    rh = 3.015 * dx
 
-emod = 2e11 # modulus Pa
-miu = 0.333 # poison ratio
-kbk = emod / (2 - 2 * miu) # bulk modulus
-ksh = emod / (2 + 2 * miu) # shear modulus
-c = 9 * emod / (π * (rh^3) * dx) # micro-modulus in PD
+    emod = 2e11 # modulus Pa
+    miu = 0.333 # poison ratio
+    kbk = emod / (2 - 2 * miu) # bulk modulus
+    ksh = emod / (2 + 2 * miu) # shear modulus
+    c = 9 * emod / (π * (rh^3) * dx) # micro-modulus in PD
 
-kc = 51.9 # thermal conductivity W/mK
-kp = 6 * kc / (π * (rh^3) * dx) # micro-conductivity in PD
-aph = 11.5e-6 # thermal expansion K-1
-cv = 472 # specific heat capacity J/kgK
-dens = 7870 # kg/m^3
-tem0 = 100 # initial temperature
+    kc = 51.9 # thermal conductivity W/mK
+    kp = 6 * kc / (π * (rh^3) * dx) # micro-conductivity in PD
+    aph = 11.5e-6 # thermal expansion K-1
+    cv = 472 # specific heat capacity J/kgK
+    dens = 7870 # kg/m^3
+    tem0 = 100 # initial temperature
 
-# boundary fictitious layers 
-lb = 3 # left for temperature
-rb = 3 # right for displacement
-ub = 0 # up
-db = 0 # down
-hm = 50 # maximum number of points in horizon
-tn = (nx + lb + rb) * (ny + ub + db)
+    # boundary fictitious layers 
+    lb = 3 # left for temperature
+    rb = 3 # right for displacement
+    ub = 0 # up
+    db = 0 # down
+    hm = 50 # maximum number of points in horizon
+    tn = (nx + lb + rb) * (ny + ub + db) # total points number (real + ficitious)
 
-# initialization
-pin = zeros(tn, 2) # initial position
-bf = zeros(tn, 2) # initial body force
-fcs = zeros(tn, 1) # fictitious bc-sign
-fbs = zeros(tn, 1) # bf bc-sign
+    # initialization
+    pin = zeros(tn, 2) # initial position
+    bf = zeros(tn, 2) # initial body force
+    fcs = zeros(tn, 1) # fictitious bc-sign
+    fbs = zeros(tn, 1) # bf bc-sign
 
-isedge = Array{Bool}(undef, tn)
-isedge .= false
+    isedge = Array{Bool}(undef, tn)
+    isedge .= false
 
-gc = 42320             ## critial energy release rate
-sc = sqrt(gc / (rh * (ksh * 6 / pi + 16 / (9 * (pi^2)) * (kbk - 2 * ksh))))
+    gc = 42320 # critial energy release rate
+    sc = sqrt(gc / (rh * (ksh * 6 / pi + 16 / (9 * (pi^2)) * (kbk - 2 * ksh))))
 
-dt = 1e-9                  ## time steps
-nt = 300                 ## total time step
-t0 = 8000                  ## total time step for leapfrogging
-u = zeros(tn, 2)            ## initialization displacement
-v = zeros(tn, 2)            ## initialization velocity
-tem = zeros(tn, 1)          ## initialization tempareture changes
-pforce = zeros(tn, 2)       ## initialization iner force
-pflux = zeros(tn, 1)        ## initialization thermal flux
-fail = ones(tn, hm)         ## initialization bond-state materix  1: undamaged 0: broken
-dmg = zeros(tn, 3)          ## initialization damage array 0:undamaged
+    dt = 1e-9
+    nt = 300 # above ~10000 there will be crack
+    t0 = 8000 # critical time step
+    u = zeros(tn, 2) # initial displacement
+    v = zeros(tn, 2) # initial velocity
+    tem = zeros(tn, 1) # initial tempareture changes
+    pforce = zeros(tn, 2) # initial inner force
+    pflux = zeros(tn, 1) # initial thermal flux
+    fail = ones(tn, hm) # initial bond-state materix {1: undamaged 0: broken}
+    dmg = zeros(tn, 3) # initial damage array {0:undamaged}
 
-ccl = 0.02                 ## pre-existing crack length
-clo = [0, 0]                ## pre-existing crack location
-bnd = 0
-maa = 1
+    ccl = 0.02 # pre-existing crack length
+    clo = [0, 0] # pre-existing crack location
+end
 
-##  discrection
+# discrection
 nnum = 0
 for i = 1:nx
     for j = 1:ny
@@ -78,8 +89,10 @@ for i = 1:nx
         end
     end
 end
-mtn = nnum                  ## material-points number
+mtn = nnum # material points number
 
+# CHECKPOINT
+mtn == nx * ny
 ids = findall(x -> x == true, isedge)
 for id in ids
     cx = pin[nnum, 1]
@@ -89,5 +102,119 @@ for id in ids
     cy < dy - 0.5 * width ||
     cy > 0.5 * width - dy
 end
-
 findall(x -> x == 1, fbs)
+
+# temperature ficitous layers
+for i = 1:lb
+    for j = 1:ny
+        nnum = nnum + 1
+        pin[nnum, 1] = -0.5 * (length + dx) - (i - 1) * dx # left
+        pin[nnum, 2] = -0.5 * (width - dx) + (j - 1) * dx
+        fcs[nnum, 1] = 1 # thermal
+    end
+end
+
+## displacement ficitous layers
+for i = 1:rb
+    for j = 1:ny
+        nnum = nnum + 1
+        pin[nnum, 1] = 0.5 * (length + dx) + (i - 1) * dx # right
+        pin[nnum, 2] = -0.5 * (width - dx) + (j - 1) * dx
+        fcs[nnum, 1] = 2 # mechanical
+    end
+end
+
+# CHECKPOINT
+tn == nnum
+
+hnt, hct, hnm, hcm, ds, fail = init.Horizon(pin, tn, rh, hm, fcs, ccl, clo)
+# hnt: material points number in each horizon for thermo
+# hct: Index matrix of each points in horizon for thermo
+# hnm: material points number in each horizon for mechanic
+# hcm: Index matrix of each points in horizon for mechanic
+# ds: Bonds' length at initial position 
+# fail: pre-existing crack, 1:undamaged 0:broken
+
+# CHECKPOINT
+idx = rand() * 40000 |> round |> Int
+count(x -> x!=0, hct[idx, :]) == hnt[idx]
+count(x -> x!=0, hcm[idx, :]) == hnm[idx]
+count(x -> x!=0, ds[idx, :]) == hnt[idx]
+findall(x -> x == 0, fail)
+
+# Correction 
+## thc: thermal corrcection factors
+## mec: mechanics corrcection factors 
+thc = init.modifyth(tn, hm, pin, hnt, hct, ds, rh, dx, kp, kc)
+mec, fac = init.modifyme(tn, hm, pin, hnm, hcm, ds, rh, dx, c, emod)
+vmv = fac[1:mtn, :] * dx^3
+
+#@showprogress for tt = 1:10#nt
+for tt = 1:10#nt
+    println("Step=", tt, ", f-bonds=", bnd)
+    # BC
+    for i = 1:tn
+        if fcs[i, 1] == 1 # left
+            tem[i, 1] = 2 * 200 - tem[i-mtn, 1] # temperature bc
+            #tem[i, 1] = 200 # temperature bc
+        elseif fcs[i, 1] == 2 # right
+            u[i, :] .= 0 # fixed bc 
+        end
+        # body force bc
+        if fbs[i, 1] == 1
+            if tt < t0
+                bf[i, 1] = 1e14 * tt * dt / dx
+            else
+                bf[i, 1] = 1e14 * t0 * dt / dx
+            end
+        end
+    end
+
+    # thermal loop
+    update_temperature!(
+        tem,
+        pflux,
+        mtn,
+        hnt,
+        hct,
+        fcs,
+        pin,
+        u,
+        v,
+        kp,
+        ds,
+        c,
+        aph,
+        thc,
+        dx,
+        fail,
+        dens,
+        cv,
+        dt,
+    )
+
+    # mechanical loop
+    update_mechanics!(
+        u,
+        v,
+        tem,
+        pforce,
+        bf,
+        mtn,
+        hnm,
+        hcm,
+        fcs,
+        pin,
+        ds,
+        c,
+        aph,
+        mec,
+        dx,
+        fail,
+        sc,
+        vmv,
+        dmg,
+        dens,
+        dt,
+    )
+end
