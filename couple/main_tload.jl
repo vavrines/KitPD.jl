@@ -56,7 +56,7 @@ function main()
     sc = sqrt(gc / (rh * (ksh * 6 / pi + 16 / (9 * (pi^2)) * (kbk - 2 * ksh))))
 
     dt = 1e-9
-    nt = 4000#15000 # above ~10000 there will be crack
+    nt = 400#15000 # above ~10000 there will be crack
     t0 = 8000 # critical time step
     u = zeros(tn, 2) # initial displacement
     v = zeros(tn, 2) # initial velocity
@@ -172,7 +172,7 @@ function main()
         )
 
         # mechanical loop
-        #=bnd = update_mechanics!(
+        update_mechanics!(
             u,
             v,
             tem,
@@ -194,71 +194,7 @@ function main()
             dmg,
             dens,
             dt,
-            bnd,
-        )=#
-
-        #=update_mechanics1!(
-            mtn,
-            pforce,
-            hnm,
-            hcm,
-            fcs,
-            pin,
-            u,
-            v,
-            ds,
-            c,
-            aph,
-            mec,
-            fail,
-            tem,
-            vmv,
-            dmg,
-            bf,
-            dens,
-            dx,
-            dt,
-            sc,
-        )=#
-
-        for i = 1:mtn
-            pforce[i, :] .= 0
-            dmg1 = 0
-            dmg2 = 0
-            for j = 1:hnm[i, 1]
-                m = hcm[i, j]
-                maa = 1
-                if fcs[m, 1] == 2
-                    maa = 0
-                end
-                yx = pin[m, 1] - pin[i, 1] + u[m, 1] - u[i, 1]
-                yy = pin[m, 2] - pin[i, 2] + u[m, 2] - u[i, 2]
-                ts = sqrt(yx^2 + yy^2)
-                s = ts / ds[i, j] - 1
-                pforce[i, 1] +=
-                    (c * s - (tem[m, 1] + tem[i, 1]) * 0.5 * c * aph * maa) * yx / ts *
-                    mec[i, j] *
-                    (dx)^3 *
-                    fail[i, j]
-                pforce[i, 2] +=
-                    (c * s - (tem[m, 1] + tem[i, 1]) * 0.5 * c * aph * maa) * yy / ts *
-                    mec[i, j] *
-                    (dx)^3 *
-                    fail[i, j]
-                ### calculate the crack
-                if abs(s - (tem[m, 1] + tem[i, 1]) * 0.5 * aph) > sc ##&& abs(pin[i,1]-clo[1]) < 0.25*length   
-                    fail[i, j] = 0
-                    bnd += 1
-                end
-                dmg1 += fail[i, j] * vmv[i, j]
-                dmg2 += vmv[i, j]
-            end
-            dmg[i, 3] = 1 - dmg1 / dmg2
-        end
-        v += (pforce + bf) * dt / dens     ### update velocity
-        u += v * dt
-
-
+        )
     end
 
     dmg[:, 1:2] = pin[1:tn, :]
