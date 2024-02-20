@@ -11,12 +11,12 @@ set = Setup(
     boundary = ["fix", "extra", "mirror", "extra"],
     limiter = "vanleer",
     cfl = 0.3,
-    maxTime = 2.0, # time
+    maxTime = 2.0,
     flux = "hll",
     hasForce = false,
 )
 #ps = PSpace2D(-0.15, 0.05, 400, -0.05, 0.15, 400, 1, 1) # Hu's geometry
-ps = PSpace2D(-0.15, 0.05, 40, -0.05, 0.15, 40, 1, 1) # Hu's geometry
+ps = PSpace2D(-0.15, 0.05, 40, -0.05, 0.15, 40, 1, 1) # coarse geometry
 vs = nothing
 gas = Gas(Kn = 1e-3, Ma = 0.9, K = 1.0)
 
@@ -143,7 +143,8 @@ function update_ghost!(ctr, ps, gas, ib)
             P1 = 0.5 * ρ1 / λ1
         end
         
-        T0 = 2 - T1
+        T0 = 2 - T1 # here the temperature of solid wall is set as 2.
+                    # we only need to update here when PD codes get involved.
         ρ0 = ρ1 * T1 / T0
 
         idx = ghost_ids[iter]
