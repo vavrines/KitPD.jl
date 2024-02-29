@@ -98,9 +98,9 @@ for id in ids
     cx = pin[nnum, 1]
     cy = pin[nnum, 2]
     @assert cx < dx - 0.5 * length ||
-    cx > 0.5 * length - dx ||
-    cy < dy - 0.5 * width ||
-    cy > 0.5 * width - dy
+            cx > 0.5 * length - dx ||
+            cy < dy - 0.5 * width ||
+            cy > 0.5 * width - dy
 end
 findall(x -> x == 1, fbs)
 
@@ -137,9 +137,9 @@ hnt, hct, hnm, hcm, ds, fail = init.Horizon(pin, tn, rh, hm, fcs, ccl, clo)
 
 # CHECKPOINT
 idx = rand() * 40000 |> round |> Int
-count(x -> x!=0, hct[idx, :]) == hnt[idx]
-count(x -> x!=0, hcm[idx, :]) == hnm[idx]
-count(x -> x!=0, ds[idx, :]) == hnt[idx]
+count(x -> x != 0, hct[idx, :]) == hnt[idx]
+count(x -> x != 0, hcm[idx, :]) == hnm[idx]
+count(x -> x != 0, ds[idx, :]) == hnt[idx]
 findall(x -> x == 0, fail)
 
 # Correction 
@@ -156,7 +156,7 @@ for tt = 1:10#nt
     for i = 1:tn
         if fcs[i, 1] == 1 # left
             tem[i, 1] = 2 * 200 - tem[i-mtn, 1] # temperature bc
-            #tem[i, 1] = 200 # temperature bc
+        #tem[i, 1] = 200 # temperature bc
         elseif fcs[i, 1] == 2 # right
             u[i, :] .= 0 # fixed bc 
         end

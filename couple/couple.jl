@@ -29,7 +29,7 @@ begin
     len = 0.1 # meter
     nx = 40
     dx = len / nx
-    mat = PDMater(δ=dx)
+    mat = PDMater(δ = dx)
     tem0 = 273 # initial temperature
 end
 
@@ -85,9 +85,9 @@ for i = 1:nx
         end
 
         if cx < dx - 0.5 * len ||
-        cx > 0.5 * len - dx ||
-        cy < dx - 0.5 * len ||
-        cy > 0.5 * len - dx
+           cx > 0.5 * len - dx ||
+           cy < dx - 0.5 * len ||
+           cy > 0.5 * len - dx
             isedge[nnum] = true
         end
 
@@ -104,7 +104,7 @@ for i = 1:lb
         pin[nnum, 2] = -0.5 * (len - dx) + (j - 1) * dx
         fcs[nnum, 1] = 1 # thermal
 
-        xyidx[nnum] = CartesianIndex(-i+1, j)
+        xyidx[nnum] = CartesianIndex(-i + 1, j)
     end
 end
 
@@ -116,7 +116,7 @@ for i = 1:rb
         pin[nnum, 2] = -0.5 * (len - dx) + (j - 1) * dx
         fcs[nnum, 1] = 2 # mechanical
 
-        xyidx[nnum] = CartesianIndex(nx+i, j)
+        xyidx[nnum] = CartesianIndex(nx + i, j)
     end
 end
 
@@ -142,7 +142,7 @@ for tt = 1:nt
     for i = 1:tn
         if fcs[i, 1] == 1 # left
             tem[i, 1] = 273 - tem[i-mtn, 1]#2 * 200 - tem[i-mtn, 1] # temperature bc
-            #tem[i, 1] = 273 # temperature bc
+        #tem[i, 1] = 273 # temperature bc
         elseif fcs[i, 1] == 2 # right
             u[i, :] .= 0 # fixed bc 
         end

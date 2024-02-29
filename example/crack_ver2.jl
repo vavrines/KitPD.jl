@@ -36,12 +36,19 @@ path = joinpath("results", jobname)
 !ispath(path) && mkpath(path) # create the path if it does not exist
 es = PD.ExportSettings(path, 100)
 
-sim = PD.PDSingleBodyAnalysis(name = jobname, pc = pc, mat = mat, precracks = [precrack],
-	bcs = [bc_bottom, bc_top], td = td, es = es)
+sim = PD.PDSingleBodyAnalysis(
+    name = jobname,
+    pc = pc,
+    mat = mat,
+    precracks = [precrack],
+    bcs = [bc_bottom, bc_top],
+    td = td,
+    es = es,
+)
 
 body = PD.init_body(sim.mat, sim.pc)
 for precrack in sim.precracks
-	PD.define_precrack!(body, precrack)
+    PD.define_precrack!(body, precrack)
 end
 
 PD.update_thread_cache!(body)
@@ -51,16 +58,17 @@ PD.init_time_discretization!(sim.td, body, sim.mat)
 
 PD.export_vtk(body, sim.es.resultfile_prefix, 0, 0.0)
 
-p = Progress(sim.td.n_steps;
-	dt = 1,
-	desc = "Time integration... ",
-	barlen = 30,
-	color = :normal,
-	enabled = !PD.is_logging(stderr),
+p = Progress(
+    sim.td.n_steps;
+    dt = 1,
+    desc = "Time integration... ",
+    barlen = 30,
+    color = :normal,
+    enabled = !PD.is_logging(stderr),
 )
 Δt½ = 0.5 * sim.td.Δt
 begin
-    for t in 1:sim.td.n_steps
+    for t = 1:sim.td.n_steps
         time = t * sim.td.Δt
         PD.update_velhalf!(body, Δt½)
         PD.apply_bcs!(body, sim.bcs, time)
@@ -74,5 +82,5 @@ begin
         end
         next!(p)
     end
-finish!(p)
+    finish!(p)
 end

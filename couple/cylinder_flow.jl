@@ -22,7 +22,7 @@ gas = Gas(Kn = 1e-3, Ma = 0.9, K = 1.0)
 
 prim0 = [1.0, 0.0, 0.0, 1.0]
 prim1 = [1.0, gas.Ma * sound_speed(1.0, gas.γ), 0.0, 1.0]
-fw = function(x, y, args...)
+fw = function (x, y, args...)
     pr = bc(x, y, args...)
     prim_conserve(pr, gas.γ)
 end
@@ -56,13 +56,13 @@ nbis = zero.(xbis)
 for iter in axes(xbis, 1)
     idx = ghost_ids[iter]
 
-    if ks.ps.y[idx] < -ks.ps.y0 - ks.ps.dx[1]/2
-        xbis[iter][1] = ks.ps.x[idx] - ks.ps.dx[idx]/2
+    if ks.ps.y[idx] < -ks.ps.y0 - ks.ps.dx[1] / 2
+        xbis[iter][1] = ks.ps.x[idx] - ks.ps.dx[idx] / 2
         xbis[iter][2] = ks.ps.y[idx]
         nbis[iter] .= [-1.0, 0.0]
     else
         xbis[iter][1] = ks.ps.x[idx]
-        xbis[iter][2] = ks.ps.y[idx] + ks.ps.dy[idx]/2
+        xbis[iter][2] = ks.ps.y[idx] + ks.ps.dy[idx] / 2
         nbis[iter] .= [0.0, 1.0]
     end
 end

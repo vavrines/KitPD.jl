@@ -83,9 +83,9 @@ function main()
                 fbs[nnum, 1] = 1
             end
             if cx < dx - 0.5 * length ||
-            cx > 0.5 * length - dx ||
-            cy < dy - 0.5 * width ||
-            cy > 0.5 * width - dy
+               cx > 0.5 * length - dx ||
+               cy < dy - 0.5 * width ||
+               cy > 0.5 * width - dy
                 isedge[nnum] = true
             end
         end
@@ -134,7 +134,7 @@ function main()
         for i = 1:tn
             if fcs[i, 1] == 1 # left
                 tem[i, 1] = 10 * 200 - tem[i-mtn, 1]#2 * 200 - tem[i-mtn, 1] # temperature bc
-                #tem[i, 1] = 200 # temperature bc
+            #tem[i, 1] = 200 # temperature bc
             elseif fcs[i, 1] == 2 # right
                 u[i, :] .= 0 # fixed bc 
             end
