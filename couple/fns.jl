@@ -288,6 +288,70 @@ function update_ghost!(ctr, ps, gas, ib)
     end
 end
 
+function update_ghost1!(ctr, ps, gas, ib, ibpd_index, tem)
+    ghost_ids, xbis, nbis, xips, ip_cids, ip_nids, ip_bids =
+        ib.idg, ib.xb, ib.nb, ib.xi, ib.idic, ib.idin, ib.idib
+
+    for iter in eachindex(ip_nids)
+        nid = ip_nids[iter]
+        bid = ip_bids[iter]
+        xf, yf = xips[iter]
+        if length(nid) == 4
+            pos = [1, xf, yf, xf * yf]
+
+            # U
+            w1 = [ctr[idx].prim[2] for idx in nid]
+            w2 = zeros(length(bid))
+            w = [w1; w2]
+
+            C = KB.bilinear_coeffs(ps, xbis, nbis, nid, bid, w)
+            U1 = C' * pos
+
+            # V
+            w1 = [ctr[idx].prim[3] for idx in nid]
+            w2 = zeros(length(bid))
+            w = [w1; w2]
+
+            C = KB.bilinear_coeffs(ps, xbis, nbis, nid, bid, w)
+            V1 = C' * pos
+
+            # T
+            w1 = [1 / ctr[idx].prim[4] for idx in nid]
+            w2 = ones(length(bid))
+            w = [w1; w2]
+
+            C = KB.bilinear_coeffs(ps, xbis, nbis, nid, bid, w)
+            T1 = C' * pos
+
+            # p
+            w1 = [0.5 * ctr[idx].prim[1] / ctr[idx].prim[4] for idx in nid]
+            w = w1
+
+            C = KB.bilinear_coeffs(ps, xbis, nbis, nid, bid, w)
+            P1 = C' * pos
+
+            ρ1 = 2 * P1 / T1
+        else
+            idx1 = ip_cids[iter]
+            ρ1, U1, V1, λ1 = ctr[idx1].prim
+            T1 = 1.0 / λ1
+            P1 = 0.5 * ρ1 / λ1
+        end
+
+        id = ibpd_index[iter]
+        tp = (tem[id] + 273) / 273
+        ## tem0 = 273 here
+
+        T0 = tp * 2 - T1 # here the temperature of solid wall is set as 2.
+        # we only need to update here when PD codes get involved.
+        ρ0 = ρ1 * T1 / T0
+
+        idx = ghost_ids[iter]
+        ctr[idx].prim .= [ρ0, -U1, -V1, 1 / T0]
+        ctr[idx].w .= prim_conserve(ctr[idx].prim, gas.γ)
+    end
+end
+
 function update_field!(KS, ctr, a1face, a2face, flags, residual)
     nx, ny, dx, dy = KS.ps.nx, KS.ps.ny, KS.ps.dx, KS.ps.dy
 

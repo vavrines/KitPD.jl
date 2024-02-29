@@ -9,16 +9,16 @@ m = 66.3e-27 kg
 R = 208.2428355957768
 
 Reference state
-L₀ = 0.1 m
+L₀ = 1 m
 T₀ = 273 K
 U₀ = 337.1951782503631 m/s
-t₀ = 0.0002965641457831028 s
+t₀ = 0.002965641457831028 s
 """
 
+using KitBase, KitPD
+using DelimitedFiles, Plots
 using Base.Threads: @threads
 using ProgressMeter: @showprogress
-using DelimitedFiles
-using KitBase
 
 cd(@__DIR__)
 include("init.jl")
@@ -58,14 +58,11 @@ begin # initialization
     isedge = Array{Bool}(undef, tn)
     isedge .= false
 
-    xyidx = Array{CartesianIndex}(undef, 1840)
+    ixy_index = Array{CartesianIndex}(undef, 1840)
     #tem .*= tem0
 end
 
 begin
-    dt = 1e-7
-    nt = 400#15000 # above ~10000 there will be crack
-    t0 = 8000 # critical time step
     ccl = 0.02 # pre-existing crack length
     clo = [0, 0] # pre-existing crack location
     bnd = 0
@@ -91,7 +88,7 @@ for i = 1:nx
             isedge[nnum] = true
         end
 
-        xyidx[nnum] = CartesianIndex(i, j)
+        ixy_index[nnum] = CartesianIndex(i, j)
     end
 end
 mtn = nnum # material points number
@@ -104,7 +101,7 @@ for i = 1:lb
         pin[nnum, 2] = -0.5 * (len - dx) + (j - 1) * dx
         fcs[nnum, 1] = 1 # thermal
 
-        xyidx[nnum] = CartesianIndex(-i + 1, j)
+        ixy_index[nnum] = CartesianIndex(-i + 1, j)
     end
 end
 
@@ -116,7 +113,7 @@ for i = 1:rb
         pin[nnum, 2] = -0.5 * (len - dx) + (j - 1) * dx
         fcs[nnum, 1] = 2 # mechanical
 
-        xyidx[nnum] = CartesianIndex(nx + i, j)
+        ixy_index[nnum] = CartesianIndex(nx + i, j)
     end
 end
 
@@ -135,24 +132,121 @@ thc = init.modifyth(tn, hm, pin, hnt, hct, ds, mat.rh, dx, mat.kp, mat.kc)
 mec, fac = init.modifyme(tn, hm, pin, hnm, hcm, ds, mat.rh, dx, mat.c, mat.emod)
 vmv = fac[1:mtn, :] * dx^3
 
+#--- fluid ---#
+set = Setup(
+    case = "square",
+    space = "2d0f0v",
+    boundary = ["fix", "extra", "mirror", "extra"],
+    limiter = "vanleer",
+    cfl = 0.2,
+    maxTime = 2.0,
+    flux = "hll",
+    hasForce = false,
+)
+ps = PSpace2D(-0.15, 0.05, nx * 2, -0.05, 0.15, nx * 2, 1, 1)
+vs = nothing
+gas = Gas(Kn = 1e-3, Ma = 0.9, K = 1.0)
+
+prim0 = [1.0, 0.0, 0.0, 1.0]
+prim1 = [1.0, gas.Ma * sound_speed(1.0, gas.γ), 0.0, 1.0]
+fw = function (x, y, args...)
+    pr = bc(x, y, args...)
+    prim_conserve(pr, gas.γ)
+end
+bc = function (x, y, args...)
+    if -ps.x1 < x < ps.x1 && ps.y0 < y < -ps.y0
+        return prim0
+    else
+        return prim1
+    end
+end
+ib0 = IB(fw, bc, NamedTuple())
+
+ks = SolverSet(set, ps, vs, gas, ib0)
+ctr, a1face, a2face = init_fvm(ks; structarray = true)
+
+flags = ones(Int, axes(ps.x))
+for i in axes(flags, 1), j in axes(flags, 2)
+    if -ps.x1 < ps.x[i, j] < ps.x1 && ps.y0 < ps.y[i, j] < -ps.y0
+        flags[i, j] = 0
+    end
+end
+flags[0, :] .= -1
+flags[ks.ps.nx+1, :] .= -1
+flags[:, 0] .= -1
+flags[:, ks.ps.ny+1] .= -1
+KB.ghost_flag!(ps, flags)
+
+ghost_ids = findall(flags .== -2)
+xbis = [Vector{Float64}(undef, 2) for iter = 1:length(ghost_ids)]
+nbis = zero.(xbis)
+for iter in axes(xbis, 1)
+    idx = ghost_ids[iter]
+
+    if ks.ps.y[idx] < -ks.ps.y0 - ks.ps.dx[1] / 2
+        xbis[iter][1] = ks.ps.x[idx] - ks.ps.dx[idx] / 2
+        xbis[iter][2] = ks.ps.y[idx]
+        nbis[iter] .= [-1.0, 0.0]
+    else
+        xbis[iter][1] = ks.ps.x[idx]
+        xbis[iter][2] = ks.ps.y[idx] + ks.ps.dy[idx] / 2
+        nbis[iter] .= [0.0, 1.0]
+    end
+end
+
+xips = KB.ip_location(ps, ghost_ids, xbis)
+ip_cids, ip_nids, ip_bids = KB.ip_connectivity(ps, xips, flags)
+
+ib = SharpIB{
+    typeof(flags),
+    typeof(ghost_ids),
+    typeof(xbis),
+    typeof(ip_cids),
+    typeof(ip_nids),
+    typeof(ip_bids),
+}(
+    flags,
+    ghost_ids,
+    xbis,
+    nbis,
+    xips,
+    ip_cids,
+    ip_nids,
+    ip_bids,
+)
+
+wbis = [zeros(4) for i = 1:size(ib.xb, 1)]
+primbis = zero.(wbis)
+solb = Solution2D(wbis, primbis)
+soli = Solution2D(deepcopy(wbis), deepcopy(primbis))
+
+dtf = timestep(ks, ctr, 0.0)
+dt = dtf * 0.002965641457831028
+nt = 200
+res = zeros(4)
+
+ibpd_index = Array{Int}(undef, length(ib.idic))
+for i in eachindex(ibpd_index)
+    idx = ib.idg[i][1] - ks.ps.nx ÷ 2
+    idy = ib.idg[i][2]
+    id = findall(x -> x == CartesianIndex(idx, idy), ixy_index)
+    @assert length(id) == 1
+    ibpd_index[i] = id[1]
+end
+
+#--- main loop ---#
 #@showprogress for tt = 1:10#nt
 for tt = 1:nt
     println("Step=", tt, ", f-bonds=", bnd)
     # BC
-    for i = 1:tn
+    for i = mtn+1:tn
         if fcs[i, 1] == 1 # left
-            tem[i, 1] = 273 - tem[i-mtn, 1]#2 * 200 - tem[i-mtn, 1] # temperature bc
-        #tem[i, 1] = 273 # temperature bc
+            ix = ks.ps.nx ÷ 2
+            iy = ixy_index[i][2]
+            Tf = 1.0 / ctr[ix, iy].prim[end] * tem0
+            tem[i, 1] = Tf - tem[i-mtn, 1]
         elseif fcs[i, 1] == 2 # right
-            u[i, :] .= 0 # fixed bc 
-        end
-        # body force bc
-        if fbs[i, 1] == 1
-            if tt < t0
-                #bf[i, 1] = 1e14 * tt * dt / dx#1e14 * tt * dt / dx
-            else
-                #bf[i, 1] = 1e14 * t0 * dt / dx#1e14 * t0 * dt / dx
-            end
+            u[i, :] .= 0
         end
     end
 
@@ -204,98 +298,17 @@ for tt = 1:nt
         dt,
         bnd,
     )
+
+    evolve!(ks, ctr, a1face, a2face, dt)
+    update_ghost1!(ctr, ks.ps, ks.gas, ib, ibpd_index, tem)
+    update_field!(ks, ctr, a1face, a2face, flags, res)
 end
 
+# plot
+plot(ks, ctr)
+
+# write
 dmg[:, 1:2] = pin[1:tn, :]
 writedlm("Displacement", u)
 writedlm("Temparature changes", tem)
 writedlm("Damage.txt", dmg)
-
-#--- fluid ---#
-#=set = Setup(
-    case = "square",
-    space = "2d0f0v",
-    boundary = ["fix", "extra", "mirror", "extra"],
-    limiter = "vanleer",
-    cfl = 0.5,
-    maxTime = 2.0,
-    flux = "hll",
-    hasForce = false,
-)
-ps = PSpace2D(-0.15, 0.05, nx*2, -0.05, 0.15, nx*2, 1, 1)
-vs = nothing
-gas = Gas(Kn = 1e-3, Ma = 0.9, K = 1.0)
-
-prim0 = [1.0, 0.0, 0.0, 1.0]
-prim1 = [1.0, gas.Ma * sound_speed(1.0, gas.γ), 0.0, 1.0]
-fw = function(x, y, args...)
-    pr = bc(x, y, args...)
-    prim_conserve(pr, gas.γ)
-end
-bc = function (x, y, args...)
-    if -ps.x1 < x < ps.x1 && ps.y0 < y < -ps.y0
-        return prim0
-    else
-        return prim1
-    end
-end
-ib0 = IB(fw, bc, NamedTuple())
-
-ks = SolverSet(set, ps, vs, gas, ib0)
-ctr, a1face, a2face = init_fvm(ks; structarray = true)
-
-flags = ones(Int, axes(ps.x))
-for i in axes(flags, 1), j in axes(flags, 2)
-    if -ps.x1 < ps.x[i, j] < ps.x1 && ps.y0 < ps.y[i, j] < -ps.y0
-        flags[i, j] = 0
-    end
-end
-flags[0, :] .= -1
-flags[ks.ps.nx+1, :] .= -1
-flags[:, 0] .= -1
-flags[:, ks.ps.ny+1] .= -1
-KB.ghost_flag!(ps, flags)
-
-ghost_ids = findall(flags .== -2)
-xbis = [Vector{Float64}(undef, 2) for iter = 1:length(ghost_ids)]
-nbis = zero.(xbis)
-for iter in axes(xbis, 1)
-    idx = ghost_ids[iter]
-
-    if ks.ps.y[idx] < -ks.ps.y0 - ks.ps.dx[1]/2
-        xbis[iter][1] = ks.ps.x[idx] - ks.ps.dx[idx]/2
-        xbis[iter][2] = ks.ps.y[idx]
-        nbis[iter] .= [-1.0, 0.0]
-    else
-        xbis[iter][1] = ks.ps.x[idx]
-        xbis[iter][2] = ks.ps.y[idx] + ks.ps.dy[idx]/2
-        nbis[iter] .= [0.0, 1.0]
-    end
-end
-
-xips = KB.ip_location(ps, ghost_ids, xbis)
-ip_cids, ip_nids, ip_bids = KB.ip_connectivity(ps, xips, flags)
-
-ib = SharpIB{
-    typeof(flags),
-    typeof(ghost_ids),
-    typeof(xbis),
-    typeof(ip_cids),
-    typeof(ip_nids),
-    typeof(ip_bids),
-}(
-    flags,
-    ghost_ids,
-    xbis,
-    nbis,
-    xips,
-    ip_cids,
-    ip_nids,
-    ip_bids,
-)
-
-wbis = [zeros(4) for i = 1:size(ib.xb, 1)]
-primbis = zero.(wbis)
-solb = Solution2D(wbis, primbis)
-soli = Solution2D(deepcopy(wbis), deepcopy(primbis))
-=#
