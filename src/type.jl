@@ -11,7 +11,7 @@ Peridynamic matter properties
     ksh::T = emod / (2 + 2 * ν) # shear modulus
     c::T = 9.0 * emod / (π * (rh^3) * δ) # micro-modulus in PD
     kc::T = 51.9 # thermal conductivity W/mK
-    kp::T = 6.0 * kc / (π * (rh^3) * dx) # micro-conductivity in PD
+    kp::T = 6.0 * kc / (π * (rh^3) * δ) # micro-conductivity in PD
     aph::T = 11.5e-6 # thermal expansion K-1
     cᵥ::T = 472.0 # specific heat capacity J/kgK
     ρ::T = 7870.0 # kg/m^3
