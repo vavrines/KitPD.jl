@@ -71,7 +71,7 @@ global M
 global N
 
 M = 1
-N = 4
+N = 3
 
 len = zeros(M, 1)
 ndiv = zeros(Int, M, 1)
@@ -89,10 +89,10 @@ loop1(1, N)
 nsize = icount
 
 p = zeros(Int, nsize, M)
-num = zeros(10, 1);
-icount = 0;
+num = zeros(10, 1)
+icount = 0
 loop2(1, N, num)
-bb = zeros(nsize, 1);
+bb = zeros(nsize, 1)
 for ii = 1:nsize
     bb[ii] = 1
     for mm = 1:M
@@ -100,9 +100,9 @@ for ii = 1:nsize
     end
 end
 
-dmag = 0;
-dEntity = 1;
-dx = zeros(M, 1);
+dmag = 0
+dEntity = 1
+dx = zeros(M, 1)
 delta = zeros(M, 1)
 for ii = 1:M
     dx[ii] = len[ii] / ndiv[ii]
@@ -110,27 +110,27 @@ for ii = 1:M
     dmag = dmag + delta[ii] * delta[ii]
     dEntity = dEntity * dx[ii]
 end
-dmag = sqrt(dmag);
-num = zeros(10, 1);
-icount = 0;
+dmag = sqrt(dmag)
+num = zeros(10, 1)
+icount = 0
 
 loop3(1, num)
 
-fvec = zeros(totnode, 1);
+fvec = zeros(totnode, 1)
 for k = 1:totnode
-    fvec[k] = coord[k, 1]^2 #+ coord[k,2]^2# + coord[k,3]^2 + coord[k,4]^2;
+    fvec[k] = coord[k, 1]^2 #+ coord[k,2]^2# + coord[k,3]^2 + coord[k,4]^2
 end
 
-nodefam = zeros(Int, 10000, 1);
-idist = zeros(M, 1);
-nmax = 0;
-#pvec = zeros(nmax,1) ;
-#weight = zeros(nmax,1);
+nodefam = zeros(Int, 10000, 1)
+idist = zeros(M, 1)
+nmax = 0
+#pvec = zeros(nmax,1)
+#weight = zeros(nmax,1)
 
 pvec = zeros(nsize)
 weight = zeros(nsize)
 
-dfvec = zeros(totnode, 1);
+dfvec = zeros(totnode, 1)
 @showprogress for k = 1:totnode
     xsi = zeros(M)
 
