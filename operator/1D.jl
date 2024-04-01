@@ -2,7 +2,7 @@ using LinearAlgebra
 
 # configuration
 cfg = (
-    np = 3, # maximum polynomial order
+    np = 5, # maximum polynomial order
     lx = 1.0, # length of the domain
     nx = 100, # number of points
     ndiff = 1, # differentiation order
