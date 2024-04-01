@@ -7,6 +7,7 @@ version = "0.1.0"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 KitBase = "86eed249-3a28-466f-8d3a-596821e1af9a"
 Peridynamics = "4dc47793-80f3-4232-b30e-ca78ca9d621b"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 
 [compat]
@@ -15,7 +16,8 @@ Peridynamics = "0.2"
 julia = "^1"
 
 [extras]
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "Plots"]
