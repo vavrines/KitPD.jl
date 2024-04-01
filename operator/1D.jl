@@ -25,7 +25,14 @@ x = collect(dx/2:dx:cfg.lx-dx/2)
 
 fvec = zeros(totnode)
 for k = 1:totnode
-    fvec[k] = x[k]^2
+    fvec[k] = x[k]^3 # smooth
+    #=fvec[k] = begin # discontinuity
+        if k <= totnode ÷ 2
+            1.0
+        else
+            0.0
+        end
+    end=#
 end
 
 nodefam = zeros(Int, 10000)
@@ -111,6 +118,7 @@ for k = 1:totnode
 end
 
 using Plots
-
-plot(x, dfvec)
-plot!(x, 2 .* x, line = :dash)
+begin
+    plot(x, dfvec)
+    plot!(x, 3 .* x .^ 2, line = :dash)
+end
