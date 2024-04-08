@@ -38,12 +38,20 @@ function Horizon(pin, tn, rh, hm, fcs, ccl, clo)
                 if dst < rh
                     nd += 1
                     dsini[i, nd] = dst
-                    if fcs[i, 1] != 2 && fcs[j, 1] != 2  ## remove the interecation of mechanic bc points
+                    if fcs[i, 1] != 2 && fcs[j, 1] != 2  ## remove the interecation of mechanic bc points 
+                        ### Here, I excluded the excess displacement boundary fictitious layer during thermal calculation. 
+                        ### Mark 2 indicates the PD points located at the displacement boundary.
+                        ### The array horct does not include points at the displacement boundary.
+                        ### This array is used for computing the surface correction for heat transfer and thermal conduction calculations.
                         ndt += 1
                         horct[i, ndt] = j
                     end
 
                     if fcs[i, 1] != 1 && fcs[j, 1] != 1  ## remove the interecation of thermo bc points
+                        ### Here, I excluded the excess temperature boundary fictitious layer during thermal calculation. 
+                        ### Mark 1 indicates the PD points located at the displacement boundary.
+                        ### The array horcm does not include points at the temperature boundary.
+                        ### This array is used for computing the surface correction for deformation.
                         ndm += 1
                         horcm[i, ndm] = j
                         if (pin[i, 1] - clo[1]) * (pin[j, 1] - clo[1]) < 0
@@ -75,6 +83,7 @@ function modifyth(tn, hm, pin, hnt, hct, ds, rh, dx, kp, kc)
     thf = zeros(tn, 1) # surface correction factor initialization of thermo
     tmen = zeros(tn, 1) # thermoal potential initialization
     tmf = zeros(tn, hm) # total correction in thermo
+        ### Here we perform surface and volume corrections separately, as the domains for heat and force are different. This function is for thermal。 
 
     tem[:, 1] = 0.001 * (pin[:, 1] + pin[:, 2])
 
@@ -123,6 +132,8 @@ function modifyme(tn, hm, pin, hnm, hcm, ds, rh, dx, c, emod)
     mof = zeros(tn, 2) # surface correction factor initialization of motion
     sten = zeros(tn, 2) # strain energy density initialization
     fmf = zeros(tn, hm) # total correction in motion
+     ### Here we perform surface and volume corrections separately, as the domains for heat and force are different. This function is for motion。 
+
 
     dfmx[:, 1] = 1.001 * pin[:, 1]
     dfmx[:, 2] = 1.000 * pin[:, 2]
