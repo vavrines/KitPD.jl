@@ -218,9 +218,9 @@ for i in eachindex(ibpd_index)
 end
 
 #--- main loop ---#
-#@showprogress for tt = 1:10#nt
-for tt = 1:100#nt
-    println("Step=", tt, ", f-bonds=", bnd)
+@showprogress for tt = 1:200#nt
+#for tt = 1:100#nt
+    #println("Step=", tt, ", f-bonds=", bnd)
     # BC
     for i = mtn+1:tn
         if fcs[i, 1] == 1 # left
@@ -300,6 +300,14 @@ for tt = 1:100#nt
 
     update_ghost2!(ctr, ks.ps, ks.gas, ib, ibpd_index, tem)
     update_field!(ks, ctr, a1face, a2face, flags, res)
+
+    for i = 1:mtn
+        idx = ixy_index[i][1] + 40
+        idy = ixy_index[i][2]
+
+        _t = (tem[i] + 273) / 273
+        ctr[idx].prim[end] = 1.0 / _t
+    end
 end
 
 # plot
