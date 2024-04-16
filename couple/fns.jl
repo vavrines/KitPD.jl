@@ -352,6 +352,29 @@ function update_ghost1!(ctr, ps, gas, ib, ibpd_index, tem)
     end
 end
 
+function update_ghost2!(ctr, ps, gas, ib, ibpd_index, tem)
+    ghost_ids, xbis, nbis, xips, ip_cids, ip_nids, ip_bids =
+        ib.idg, ib.xb, ib.nb, ib.xi, ib.idic, ib.idin, ib.idib
+
+    for iter in eachindex(ip_nids)
+        idx1 = ip_cids[iter]
+        ρ1, U1, V1, λ1 = ctr[idx1].prim
+        T1 = 1.0 / λ1
+
+        id = ibpd_index[iter]
+        tp = (tem[id] + 273) / 273
+        ## tem0 = 273 here
+
+        T0 = tp * 2 - T1
+        #T0 = 2 - T1
+        ρ0 = ρ1 * T1 / T0
+
+        idx = ghost_ids[iter]
+        ctr[idx].prim .= [ρ0, -U1, -V1, 1 / T0]
+        ctr[idx].w .= prim_conserve(ctr[idx].prim, gas.γ)
+    end
+end
+
 function update_field!(KS, ctr, a1face, a2face, flags, residual)
     nx, ny, dx, dy = KS.ps.nx, KS.ps.ny, KS.ps.dx, KS.ps.dy
 
