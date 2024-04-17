@@ -218,9 +218,10 @@ for i in eachindex(ibpd_index)
 end
 
 #--- main loop ---#
-@showprogress for tt = 1:200#nt
+@showprogress for tt = 1:500#nt
 #for tt = 1:100#nt
-    #println("Step=", tt, ", f-bonds=", bnd)
+#anim = @animate for tt = 1:500
+    #println("Step=", tt)
     # BC
     for i = mtn+1:tn
         if fcs[i, 1] == 1 # left
@@ -257,6 +258,7 @@ end
     )
 
     # mechanical loop
+    #bnd = 0
     bnd = update_mechanics1!(
         u,
         v,
@@ -306,15 +308,19 @@ end
         idy = ixy_index[i][2]
 
         _t = (tem[i] + 273) / 273
-        ctr[idx].prim[end] = 1.0 / _t
+        ctr[idx, idy].prim[end] = 1.0 / _t
     end
+
+    plot(ks, ctr)
 end
+
+gif(anim, "anim_fps15.gif", fps = 15)
 
 # plot
 plot(ks, ctr)
 
 sol = extract_sol(ks, ctr)
-plot(ks.ps.x[1:40, 1], sol[1:40, 20, 2])
+plot(ks.ps.x[1:60, 1], 1 ./ sol[1:60, 10, 4])
 
 # write
 dmg[:, 1:2] = pin[1:tn, :]

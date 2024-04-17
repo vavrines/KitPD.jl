@@ -63,7 +63,8 @@ function update_temperature!(
                 isfail[i, j]
         end
     end
-    @. sol += flux * dt / (ρ * cᵥ)
+    #@. sol += flux * dt / (ρ * cᵥ)
+    @. sol += flux * dt / (ρ * cᵥ) * 60000
 
     return nothing
 end
